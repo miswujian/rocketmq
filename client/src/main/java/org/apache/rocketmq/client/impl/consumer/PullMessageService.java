@@ -69,6 +69,10 @@ public class PullMessageService extends ServiceThread {
         }
     }
 
+    /**
+     * 重平衡和延迟会调用
+     * @param pullRequest
+     */
     public void executePullRequestImmediately(final PullRequest pullRequest) {
         try {
             this.pullRequestQueue.put(pullRequest);
