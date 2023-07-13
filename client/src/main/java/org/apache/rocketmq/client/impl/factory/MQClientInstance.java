@@ -106,7 +106,7 @@ public class MQClientInstance {
     /**
      * 生产者组名 对应 MQProducerInner 的实现
      */
-    private final ConcurrentMap<String/* group */, MQProducerInner> producerTable = new ConcurrentHashMap<String, MQProducerInner>();
+    public final ConcurrentMap<String/* group */, MQProducerInner> producerTable = new ConcurrentHashMap<String, MQProducerInner>();
 
     /**
      * 每个消费者组对应一个 MQConsumerInner
@@ -282,6 +282,10 @@ public class MQClientInstance {
         return mqList;
     }
 
+    /**
+     * 生产者消费者都会调用这个
+     * @throws MQClientException
+     */
     public void start() throws MQClientException {
 
         synchronized (this) {
@@ -304,6 +308,7 @@ public class MQClientInstance {
                     // 重新是用来重新平衡，包括发送拉取消息的请求
                     this.rebalanceService.start();
                     // Start push service
+                    //第二次执行 org.apache.rocketmq.client.impl.producer.DefaultMQProducerImpl.start(boolean)
                     this.defaultMQProducer.getDefaultMQProducerImpl().start(false);
                     log.info("the client factory [{}] start OK", this.clientId);
                     this.serviceState = ServiceState.RUNNING;
@@ -983,7 +988,6 @@ public class MQClientInstance {
         if (null == group || null == producer) {
             return false;
         }
-
         MQProducerInner prev = this.producerTable.putIfAbsent(group, producer);
         if (prev != null) {
             log.warn("the producer group[{}] exist already.", group);

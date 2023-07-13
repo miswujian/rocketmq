@@ -24,6 +24,9 @@ import org.apache.rocketmq.common.message.MessageExt;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * 只是一个例子而已
+ */
 public class TransactionListenerImpl implements TransactionListener {
     private AtomicInteger transactionIndex = new AtomicInteger(0);
 

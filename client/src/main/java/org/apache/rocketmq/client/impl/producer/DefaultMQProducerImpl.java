@@ -105,6 +105,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
 
     /**
      * 主题对应 主题的详细信息
+     * org.apache.rocketmq.client.impl.producer.DefaultMQProducerImpl#updateTopicPublishInfo(java.lang.String, org.apache.rocketmq.client.impl.producer.TopicPublishInfo) 会进行更新
      */
     private final ConcurrentMap<String/* topic */, TopicPublishInfo> topicPublishInfoTable =
         new ConcurrentHashMap<String, TopicPublishInfo>();
@@ -225,7 +226,6 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                 }
 
                 this.mQClientFactory = MQClientManager.getInstance().getOrCreateMQClientInstance(this.defaultMQProducer, rpcHook);
-
                 boolean registerOK = mQClientFactory.registerProducer(this.defaultMQProducer.getProducerGroup(), this);
                 if (!registerOK) {
                     this.serviceState = ServiceState.CREATE_JUST;
@@ -233,7 +233,6 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                         + "] has been created before, specify another name please." + FAQUrl.suggestTodo(FAQUrl.GROUP_NAME_DUPLICATE_URL),
                         null);
                 }
-
                 // 默认创建一个测试的主题
                 this.topicPublishInfoTable.put(this.defaultMQProducer.getCreateTopicKey(), new TopicPublishInfo());
 
@@ -1216,8 +1215,8 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                 Message userMessage = MessageAccessor.cloneMessage(msg);
                 String userTopic = NamespaceUtil.withoutNamespace(userMessage.getTopic(), mQClientFactory.getClientConfig().getNamespace());
                 userMessage.setTopic(userTopic);
-
-                mq = mQClientFactory.getClientConfig().queueWithNamespace(selector.select(messageQueueList, userMessage, arg));
+                MessageQueue select = selector.select(messageQueueList, userMessage, arg);
+                mq = mQClientFactory.getClientConfig().queueWithNamespace(select);
             } catch (Throwable e) {
                 throw new MQClientException("select message queue threw exception.", e);
             }

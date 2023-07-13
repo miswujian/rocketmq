@@ -266,7 +266,6 @@ public class AsyncTraceDispatcher implements TraceDispatcher {
                     }
                 }
             }
-
         }
     }
 
