@@ -16,6 +16,7 @@
  */
 package org.apache.rocketmq.remoting.netty;
 
+import com.alibaba.fastjson.JSON;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -201,7 +202,6 @@ public abstract class NettyRemotingAbstract {
         final Pair<NettyRequestProcessor, ExecutorService> matched = this.processorTable.get(cmd.getCode());
         final Pair<NettyRequestProcessor, ExecutorService> pair = null == matched ? this.defaultRequestProcessor : matched;
         final int opaque = cmd.getOpaque();
-
         if (pair != null) {
             Runnable run = new Runnable() {
                 @Override
@@ -229,8 +229,10 @@ public abstract class NettyRemotingAbstract {
                                 }
                             }
                         };
+                        //接收的消息进入这里
                         if (pair.getObject1() instanceof AsyncNettyRequestProcessor) {
                             AsyncNettyRequestProcessor processor = (AsyncNettyRequestProcessor)pair.getObject1();
+                            //miswujian:接收的消息为 SendMessageProcessor.asyncProcessRequest
                             processor.asyncProcessRequest(ctx, cmd, callback);
                         } else {
                             NettyRequestProcessor processor = pair.getObject1();
@@ -250,7 +252,6 @@ public abstract class NettyRemotingAbstract {
                     }
                 }
             };
-
             if (pair.getObject1().rejectRequest()) {
                 final RemotingCommand response = RemotingCommand.createResponseCommand(RemotingSysResponseCode.SYSTEM_BUSY,
                     "[REJECTREQUEST]system busy, start flow control for a while");

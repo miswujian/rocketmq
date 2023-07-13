@@ -17,6 +17,7 @@
 
 package org.apache.rocketmq.remoting.netty;
 
+import com.alibaba.fastjson.JSON;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 

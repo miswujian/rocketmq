@@ -16,6 +16,7 @@
  */
 package org.apache.rocketmq.broker.processor;
 
+import com.alibaba.fastjson.JSON;
 import io.netty.channel.ChannelHandlerContext;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
