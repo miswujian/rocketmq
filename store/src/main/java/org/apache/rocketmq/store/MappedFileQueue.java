@@ -233,6 +233,7 @@ public class MappedFileQueue {
             createOffset = mappedFileLast.getFileFromOffset() + this.mappedFileSize;
         }
 
+        //miswujian:文件满了 或者 没有 则创建一个新的文件
         if (createOffset != -1 && needCreate) {
             return tryCreateMappedFile(createOffset);
         }

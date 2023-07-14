@@ -20,7 +20,7 @@ public class ProducerTest {
         producer.start();
         TimeUnit.SECONDS.sleep(20);
         // 发送消息
-        SendResult result = producer.send(new Message(topic,  "嘿嘿嘿".getBytes()), new SelectMessageQueueByHash(), "test");
+        SendResult result = producer.send(new Message(topic,  "嘿嘿嘿123".getBytes()), new SelectMessageQueueByHash(), "test");
         System.out.println(result.getSendStatus());
         /*result = producer.send(new Message(topic,  "092912147".getBytes()), new SelectMessageQueueByHash(), "test");
         System.out.println(result.getSendStatus());
@@ -28,7 +28,7 @@ public class ProducerTest {
         System.out.println(result.getSendStatus());
         result = producer.send(new Message(topic,  "092912149".getBytes()), new SelectMessageQueueByHash(), "test");
         System.out.println(result.getSendStatus());*/
-        TimeUnit.SECONDS.sleep(2000);
+        //TimeUnit.SECONDS.sleep(2000);
         // 关闭producer
         producer.shutdown();
     }

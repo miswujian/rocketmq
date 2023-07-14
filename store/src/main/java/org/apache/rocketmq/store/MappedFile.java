@@ -314,6 +314,7 @@ public class MappedFile extends ReferenceResource {
                 int value = getReadPosition();
 
                 try {
+                    //刷新缓存
                     //We only append data to fileChannel or mappedByteBuffer, never both.
                     if (writeBuffer != null || this.fileChannel.position() != 0) {
                         this.fileChannel.force(false);
@@ -375,6 +376,7 @@ public class MappedFile extends ReferenceResource {
         }
     }
 
+    //miswujian:需要达到flushLeastPages页数据才进行刷新 如果flushLeastPages为0则有数据就刷新
     private boolean isAbleToFlush(final int flushLeastPages) {
         int flush = this.flushedPosition.get();
         int write = getReadPosition();

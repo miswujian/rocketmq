@@ -16,6 +16,7 @@
  */
 package org.apache.rocketmq.store;
 
+import com.alibaba.fastjson.JSON;
 import org.apache.rocketmq.common.ServiceThread;
 import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.constant.LoggerName;
@@ -671,6 +672,7 @@ public class CommitLog {
                 int queueId = ScheduleMessageService.delayLevel2QueueId(msg.getDelayTimeLevel());
 
                 // Backup real topic, queueId
+                //miswujian:存储真实的mq topic 和 队列id
                 MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_TOPIC, msg.getTopic());
                 MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_QUEUE_ID, String.valueOf(msg.getQueueId()));
                 msg.setPropertiesString(MessageDecoder.messageProperties2String(msg.getProperties()));
@@ -701,6 +703,7 @@ public class CommitLog {
         long elapsedTimeInLock = 0;
         MappedFile unlockMappedFile = null;
 
+        //miswujian:根据配置 选择加锁方式 cas 跟 lock
         putMessageLock.lock(); //spin or ReentrantLock ,depending on store config
         try {
             // 获取最后一个MappedFile，其实很简单，因为CommitLog有很多的文件，那么每次写新的消息肯定要往最新的文件也就是最后一个文件写
@@ -710,9 +713,11 @@ public class CommitLog {
 
             // Here settings are stored timestamp, in order to ensure an orderly
             // global
+            //miswujian:这里的设置是存储时间戳的，以确保有序(全局的)
             msg.setStoreTimestamp(beginLockTimestamp);
 
             if (null == mappedFile || mappedFile.isFull()) {
+                //miswujian:不存在可用的则创建新的
                 mappedFile = this.mappedFileQueue.getLastMappedFile(0); // Mark: NewFile may be cause noise
             }
             if (null == mappedFile) {
@@ -720,11 +725,12 @@ public class CommitLog {
                 return CompletableFuture.completedFuture(new PutMessageResult(PutMessageStatus.CREATE_MAPEDFILE_FAILED, null));
             }
 
+            //miswujian:文件写入结果
             result = mappedFile.appendMessage(msg, this.appendMessageCallback, putMessageContext);
             switch (result.getStatus()) {
                 case PUT_OK:
                     break;
-                case END_OF_FILE:
+                case END_OF_FILE://miswujian:文件满了 创建新的文件重新存储消息
                     unlockMappedFile = mappedFile;
                     // Create a new file, re-write the message
                     mappedFile = this.mappedFileQueue.getLastMappedFile(0);
@@ -761,9 +767,11 @@ public class CommitLog {
         PutMessageResult putMessageResult = new PutMessageResult(PutMessageStatus.PUT_OK, result);
 
         // Statistics
+        //miswujian:统计数据 消息数量和消息大小
         storeStatsService.getSinglePutMessageTopicTimesTotal(msg.getTopic()).add(1);
         storeStatsService.getSinglePutMessageTopicSizeTotal(topic).add(result.getWroteBytes());
 
+        System.err.println("开始刷盘了");
         // 提交刷盘的请求
         CompletableFuture<PutMessageStatus> flushResultFuture = submitFlushRequest(result, msg);
         //提交主从复制的请求
@@ -902,6 +910,7 @@ public class CommitLog {
      */
     public CompletableFuture<PutMessageStatus> submitFlushRequest(AppendMessageResult result, MessageExt messageExt) {
         // Synchronization flush
+        System.err.println("this.defaultMessageStore.getMessageStoreConfig().getFlushDiskType()：" + this.defaultMessageStore.getMessageStoreConfig().getFlushDiskType());
         if (FlushDiskType.SYNC_FLUSH == this.defaultMessageStore.getMessageStoreConfig().getFlushDiskType()) {
             final GroupCommitService service = (GroupCommitService) this.flushCommitLogService;
             if (messageExt.isWaitStoreMsgOK()) {
@@ -1131,9 +1140,11 @@ public class CommitLog {
     }
 
     /**
+     * miswujian:异步刷盘
      * 异步刷盘 异步刷盘也有两种机制，是根据配置文件来决定的，二选一，默认是第一种
      * 1）一种是定时异步刷，也就是每隔0.5s触发一次刷盘，
      * 2）还有一种就是来一条消息触发一次刷盘，但是也是异步的
+     *
      * 默认每次刷4页，不足4页就不刷，也就是说如果触发了刷盘，内存的页数少于4，也是不会去刷盘的，也就是仅靠靠这种刷盘机制，可能会有少于4页的数据刷不到磁盘
      * 为了彻底地将少于4页的数据刷到磁盘，默认每隔10s中就强制刷一次所有的数据到磁盘，所以理论上每隔10s中，磁盘的数据和内存中的数据是一样的
      */
@@ -1150,7 +1161,7 @@ public class CommitLog {
             while (!this.isStopped()) {
                 boolean flushCommitLogTimed = CommitLog.this.defaultMessageStore.getMessageStoreConfig().isFlushCommitLogTimed();
 
-                //刷盘的频率
+                //miswujian:刷盘的频率 0.5s刷新一次
                 int interval = CommitLog.this.defaultMessageStore.getMessageStoreConfig().getFlushIntervalCommitLog();
                 // 默认一次刷 4 页数据，也就是16k
                 int flushPhysicQueueLeastPages = CommitLog.this.defaultMessageStore.getMessageStoreConfig().getFlushCommitLogLeastPages();
@@ -1164,13 +1175,14 @@ public class CommitLog {
                 long currentTimeMillis = System.currentTimeMillis();
                 if (currentTimeMillis >= (this.lastFlushTimestamp + flushPhysicQueueThoroughInterval)) {
                     this.lastFlushTimestamp = currentTimeMillis;
+                    //miswujian:每10s 设置一次 即使数据不够4页也刷盘
                     flushPhysicQueueLeastPages = 0;
                     printFlushProgress = (printTimes++ % 10) == 0;
                 }
 
                 try {
                     if (flushCommitLogTimed) {
-                        // 定时 每个一定时间刷，不论这段时间有没有新的数据产生
+                        // 定时 每隔一定时间刷，不论这段时间有没有新的数据产生
                         Thread.sleep(interval);
                     } else {
                         //等待，有数据就刷
@@ -1182,6 +1194,7 @@ public class CommitLog {
                     }
 
                     long begin = System.currentTimeMillis();
+                    //miswujian:刷盘操作
                     CommitLog.this.mappedFileQueue.flush(flushPhysicQueueLeastPages);
                     long storeTimestamp = CommitLog.this.mappedFileQueue.getStoreTimestamp();
                     if (storeTimestamp > 0) {
